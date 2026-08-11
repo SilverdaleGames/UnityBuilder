@@ -1,57 +1,61 @@
-# Repository Agent Guide
+# Unity Builder Agent Guide
 
-This is the vendor-neutral entry point for coding agents. Keep it concise and repository-specific. Shared engineering policy lives in `REPO-STANDARDS.md`; human setup and usage belong in `README.md`; deeper architecture and lessons belong under `docs/`.
+This repository contains an editor-only Unity Package Manager package. Keep this file short and based on verified behavior; architecture context lives in `docs/AI_CONTEXT.md`, and durable decisions live in `docs/DECISIONS.md`.
 
-## Start here
+## Repository layout
 
-- Read `README.md`, `REPO-STANDARDS.md`, `docs/AI_CONTEXT.md`, and relevant decisions before changing the repository.
-- Inspect `git status` and preserve unrelated or user-owned changes.
-- Replace every placeholder in this file when creating a repository from the template.
+- `package.json` is the Unity package manifest and canonical package version.
+- `Editor/Core/` contains the provider-neutral `Silverdale.UnityBuilder.Editor` assembly.
+- `Editor/Platforms/` contains Android and Apple build helpers.
+- `Editor/Integrations/` contains optional Addressables, TeamCity, Unity Build Automation, and Package Manager assemblies.
+- `Tests/Editor/` contains Unity editor tests for core orchestration.
+- `.github/workflows/` contains validation, pull-request title enforcement, and automated SemVer releases.
+- `REPO-STANDARDS.md` defines shared commit, branch, versioning, security, and repository rules.
 
-## Repository map
+## Before changing files
 
-<!-- Describe the important directories, entry points, generated files, and ownership boundaries. -->
+- Read this file, `REPO-STANDARDS.md`, `docs/AI_CONTEXT.md`, and relevant entries in `docs/DECISIONS.md`.
+- Inspect `git status` and preserve unrelated work.
+- Trace plugin lifecycle order and consuming call sites before changing shared APIs.
+- Treat `.cs` files and their Unity `.meta` files as coupled assets; preserve GUIDs when moving files.
 
-## Commands
+## Architecture rules
 
-<!-- Provide exact, verified commands. Delete commands that do not apply. -->
+- Keep the package editor-only. Runtime game code must not depend on this assembly.
+- Keep product-specific build configurations, identifiers, credentials, upload destinations, and assets in consuming projects.
+- Extend behavior through `Plugin` lifecycle hooks instead of adding project conditionals to the core pipeline.
+- Preserve `[ConfigName]` discovery so configurations can live in separate project assemblies.
+- Preserve stable registration order when no `RunsBefore` or `RunsAfter` constraint applies.
+- Keep `BuildServices` defaults safe for local use and register CI-specific providers explicitly.
+- Keep CI providers and platform adapters isolated from the core orchestration where practical.
+- Avoid adding mandatory dependencies unless the core package requires them. Declare every package dependency in `package.json`.
 
-```text
-install: <command>
-lint:    <command>
-test:    <command>
-build:   <command>
-run:     <command>
-```
+## Security and external effects
 
-Do not claim a check passed unless it was run successfully. If a command requires credentials, external services, or unsupported tooling, state that limitation.
+- Never commit credentials, signing material, service-account files, tokens, passwords, keystores, or private keys.
+- Building a local player is validation; uploading content, publishing packages, distributing builds, and changing cloud environments are external actions and require explicit authorization.
+- Release tags are created only by `.github/workflows/release.yml` after a merge to `main`.
 
-## Project rules
+## Validation
 
-<!-- Add architecture rules, conventions, fragile areas, and files agents must not edit. -->
+- Validate JSON and assembly definition syntax.
+- Confirm every package asset that requires Unity identity has its matching `.meta` file.
+- Compile `Silverdale.UnityBuilder.Editor` with the minimum supported Unity version when available.
+- Exercise configuration discovery and plugin ordering when changing orchestration.
+- Validate platform-specific code for the relevant build target and installed Unity platform module.
+- State exactly what was and was not run when Unity or platform tooling is unavailable.
 
-- Follow nearby code and test patterns.
-- Keep changes focused; do not combine unrelated cleanup or dependency upgrades.
-- Add or update tests when behavior changes.
-- Update durable documentation when a change invalidates it.
-- Start work from `development` on a typed working branch. Merge working PRs
-  into `development` first; promote the tested `development` history to `main`.
+## Commits and releases
 
-## Context documentation
+- Use Conventional Commits without scopes: `<type>: <imperative summary>`.
+- Allowed types: `feat`, `fix`, `perf`, `refactor`, `chore`, `docs`, `test`, and `ci`.
+- Use `feat!:` or a `BREAKING CHANGE:` footer for a breaking change.
+- Keep summaries imperative, at most 72 characters, and without a trailing period.
+- Use the SemVer profile from `REPO-STANDARDS.md`. Do not edit versions or create tags manually.
+- Use SSH for Git transport.
 
-- Keep architecture, data flow, integration boundaries, and verified operational context in `docs/AI_CONTEXT.md`.
-- Record non-obvious decisions and regression-prevention lessons in `docs/DECISIONS.md`.
-- Keep instructions verifiable and current; mark unknowns instead of inventing commands or guarantees.
+## Documentation
 
-## Safety
-
-- Never print, store, or commit credentials, private keys, tokens, passwords, service-account files, or personal data.
-- Treat deployments, releases, destructive migrations, and writes to production or shared environments as external side effects requiring explicit authorization.
-- Use SSH for Git fetch and push. Keep GitHub remotes in SSH form, such as `git@github.com:OWNER/REPOSITORY.git`.
-- GitHub CLI authentication is required only for GitHub API operations such as creating or editing pull requests, issues, or releases—not for ordinary SSH Git transport.
-
-## Repository-specific exceptions
-
-<!-- Record justified exceptions to REPO-STANDARDS.md, including default branch, versioning profile, deployment model, or release process. Write "None" when there are no exceptions. -->
-
-- None.
+- Keep setup and public usage in `README.md`.
+- Put stable architecture and workflow explanations in `docs/AI_CONTEXT.md`.
+- Record non-obvious bug-prevention decisions in `docs/DECISIONS.md`.

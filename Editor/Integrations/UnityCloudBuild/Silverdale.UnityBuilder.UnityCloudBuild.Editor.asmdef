@@ -1,0 +1,20 @@
+{
+  "name": "Silverdale.UnityBuilder.UnityCloudBuild.Editor",
+  "rootNamespace": "Silverdale.UnityBuilder",
+  "references": [
+    "Silverdale.UnityBuilder.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [
+    "UNITY_CLOUD_BUILD"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

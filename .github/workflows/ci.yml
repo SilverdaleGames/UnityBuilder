@@ -1,11 +1,5 @@
 name: CI
 
-# Required check on development and main. Adapt the steps to the stack; keep the shape:
-# install -> lint/typecheck -> test -> build. A repo with no tests still
-# runs lint + build — "no CI" is not a valid state.
-#
-# The npm steps are guarded so the bare template stays green; once the repo
-# has a package.json they run, and for other stacks you replace them.
 on:
   push:
     branches: [development, main]
@@ -15,19 +9,57 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v6
-        if: ${{ hashFiles('package.json') != '' }}
-        with:
-          node-version: "22"
-      - if: ${{ hashFiles('package.json') != '' }}
+
+      - name: Validate package structure
+        shell: bash
         run: |
-          npm ci
-          npm run lint --if-present
-          npm test --if-present
-          npm run build --if-present
-      - if: ${{ hashFiles('package.json') == '' }}
-        run: echo "No package.json — adapt ci.yml to this repo's stack."
+          set -euo pipefail
+          python3 -m json.tool package.json >/dev/null
+          while IFS= read -r asmdef; do
+            python3 -m json.tool "$asmdef" >/dev/null
+          done < <(find Editor Tests -name '*.asmdef' | sort)
+
+          test "$(python3 -c 'import json; print(json.load(open("package.json"))["name"])')" = "com.silverdale.unity-builder"
+          test "$(python3 -c 'import json; print(json.load(open("Editor/Core/Silverdale.UnityBuilder.Editor.asmdef"))["name"])')" = "Silverdale.UnityBuilder.Editor"
+          test "$(python3 -c 'import json; print(json.load(open("Editor/Core/Silverdale.UnityBuilder.Editor.asmdef"))["includePlatforms"][0])')" = "Editor"
+
+      - name: Verify Unity metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=0
+          for asset in package.json; do
+            if [ ! -f "${asset}.meta" ]; then
+              echo "Missing metadata: ${asset}.meta"
+              status=1
+            fi
+          done
+          if [ ! -f Editor.meta ]; then
+            echo "Missing metadata: Editor.meta"
+            status=1
+          fi
+          while IFS= read -r asset; do
+            case "$asset" in *.meta) continue ;; esac
+            if [ ! -f "${asset}.meta" ]; then
+              echo "Missing metadata: ${asset}.meta"
+              status=1
+            fi
+          done < <(find Editor Tests -type f | sort)
+          exit "$status"
+
+      - name: Check package isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RInE 'AnimalPark|EditorGlobalReferencesManager|UploadGoogleCloudStorage|GameVersion' Editor --include='*.cs'; then
+            echo "Project-specific code must stay outside the reusable package."
+            exit 1
+          fi
+
+      - name: Check whitespace
+        shell: bash
+        run: git show --check --format= HEAD
