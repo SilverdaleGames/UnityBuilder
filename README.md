@@ -1,32 +1,45 @@
 # Unity Builder
 
-An extensible, editor-only Unity build pipeline from Silverdale Games. It discovers project-owned build configurations and composes preprocessing, player-build, and postprocessing behavior from reusable plugins.
-
-The package keeps build orchestration reusable while leaving product-specific environments, credentials, version rules, uploads, and asset configuration in each consuming project.
+Unity Builder gives a Unity project one batch-mode entry point for named build configurations. Each project owns its release rules; the package supplies the build lifecycle and reusable plugins for common Unity, platform, Addressables, and CI work.
 
 ## Requirements
 
 - Unity 6000.0 or newer
 - Addressables 3.1.0 or newer
-- A project editor assembly for concrete build configurations
+- An editor-only assembly for your project's build configurations
 
 ## Install
 
-Add a tagged release to `Packages/manifest.json`:
+Add the latest tagged release to `Packages/manifest.json`:
 
 ```json
 {
   "dependencies": {
-    "com.silverdale.unity-builder": "https://github.com/SilverdaleGames/UnityBuilder.git#v0.1.0"
+    "com.silverdale.unity-builder": "https://github.com/SilverdaleGames/UnityBuilder.git#v0.2.0"
   }
 }
 ```
 
-Use a release tag rather than `main` so every project resolves a reproducible package version.
+Pin a tag instead of `main` so the same project revision always resolves the same package version.
 
-## Define a build configuration
+## Create your first configuration
 
-Create an editor assembly that references `Silverdale.UnityBuilder.Editor`, then define a named configuration:
+Put build configurations in an editor folder, for example `Assets/Build/Editor`. Add an assembly definition there that references the core package assembly:
+
+```json
+{
+  "name": "MyGame.Build.Editor",
+  "references": [
+    "Silverdale.UnityBuilder.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": false
+}
+```
+
+Then add a named configuration:
 
 ```csharp
 using Silverdale.UnityBuilder;
@@ -34,18 +47,18 @@ using Silverdale.UnityBuilder;
 [ConfigName("development")]
 public sealed class DevelopmentBuildConfig : BuilderConfig
 {
-    protected override void OnPreprocessBuildConfigure()
-    {
-        Get<ScriptingDefines>().Defines.Add("DEVELOPMENT_BUILD");
-        Get<AddressableBuilder>();
-    }
+	protected override void OnPreprocessBuildConfigure()
+	{
+		Get<ScriptingDefines>().Defines.Add("DEVELOPMENT_BUILD");
+		Get<AddressableBuilder>();
+	}
 }
 ```
 
-Run the configuration from Unity batch mode:
+Run it with the Unity executable for your installed editor version:
 
 ```sh
-Unity \
+/path/to/Unity \
   -batchmode \
   -quit \
   -projectPath /path/to/project \
@@ -53,54 +66,39 @@ Unity \
   -config development
 ```
 
-`BuilderConfig` executes enabled plugins in registration order:
+Unity Builder reports an error when `-config` is missing, unknown, or matches more than one configuration. The selected configuration derives its target and output path from Unity and the supplied command-line options.
 
-1. `PreProcess` configures Unity and the project.
-2. `PreBuild` prepares build-time content such as Addressables.
-3. Unity runs `BuildPipeline.BuildPlayer`.
-4. `PostBuild` modifies exported platform projects or artifacts.
+## Build lifecycle
 
-Included building blocks cover Android SDK and signing configuration, Apple project capabilities, Xcode plist editing, scripting defines, Addressables, Unity Package Manager changes, TeamCity service messages, and local/CI build manifests.
+For each enabled plugin, Unity Builder runs:
 
-## Register build services
+1. `PreProcess` to configure Unity and the project.
+2. `PreBuild` to prepare content such as Addressables.
+3. `BuildPipeline.BuildPlayer` to create the player.
+4. `PostBuild` to modify or inspect the exported artifact.
 
-The core uses local no-op services by default and does not assume a CI provider. Register integrations from project-owned editor initialization or configuration code:
+Plugins run in registration order unless ordering attributes add a dependency.
 
-```csharp
-BuildServices.Register<ICloudBuildManifestProvider>(
-    new TeamCityBuildManifestProvider());
-BuildServices.Register<ICloudBuildBlockProvider>(
-    new TeamCityCloudBuildBlockProvider());
-BuildServices.Register<ICloudBuildTagProvider>(
-    new TeamCityCloudBuildTagProvider());
-```
+## Add a project plugin
 
-Custom CI systems implement the same interfaces. `BuildServices.Reset()` restores the local defaults, which is useful for tests and local tooling.
-
-The included TeamCity integration registers itself in batch mode. The Unity Build Automation integration registers its manifest provider when `UNITY_CLOUD_BUILD` is defined. Explicit project registration can override either selection.
-
-## Extending the package
-
-Derive from `Plugin` and override only the lifecycle stages you need:
+Derive from `Plugin` and implement only the stages you need:
 
 ```csharp
 public sealed class BuildMetadataPlugin : Plugin
 {
-    public override void PreProcess(BuilderConfig config)
-    {
-        // Configure project state before the player build.
-    }
+	public override void PreProcess(BuilderConfig config)
+	{
+		// Configure state before the player build.
+	}
 
-    public override void PostBuild(BuilderConfig config, string exportPath)
-    {
-        // Process the exported artifact.
-    }
+	public override void PostBuild(BuilderConfig config, string exportPath)
+	{
+		// Process the completed artifact.
+	}
 }
 ```
 
-Register it from a project configuration with `Get<BuildMetadataPlugin>()` or `AddPlugin(...)`.
-
-Plugins run in registration order unless they declare dependencies:
+Register it with `Get<BuildMetadataPlugin>()` or `AddPlugin(...)` from a configuration. Declare ordering only when one plugin actually depends on another:
 
 ```csharp
 [RunsAfter(typeof(ScriptingDefines))]
@@ -110,38 +108,33 @@ public sealed class BuildMetadataPlugin : Plugin
 }
 ```
 
-Missing dependency types are ignored, so optional integrations remain optional. Dependency cycles stop the build with an explicit error.
+A dependency attribute applies when the referenced plugin is present. Missing optional plugins are ignored; dependency cycles fail with a clear error.
 
-## Assemblies
+## Included assemblies
 
-- `Silverdale.UnityBuilder.Editor` contains the core pipeline and scripting defines.
-- `Silverdale.UnityBuilder.Platforms.Editor` contains Android and Apple helpers.
-- `Silverdale.UnityBuilder.Addressables.Editor` isolates the Addressables integration.
-- `Silverdale.UnityBuilder.TeamCity.Editor` contains TeamCity providers.
-- `Silverdale.UnityBuilder.UnityCloudBuild.Editor` is enabled for Unity Build Automation.
-- `Silverdale.UnityBuilder.PackageManager.Editor` contains package mutation support.
+Reference only the assemblies your project uses:
 
-## Security
+- `Silverdale.UnityBuilder.Editor`: build orchestration and scripting defines
+- `Silverdale.UnityBuilder.Platforms.Editor`: Android and Apple build helpers
+- `Silverdale.UnityBuilder.Addressables.Editor`: Addressables builds
+- `Silverdale.UnityBuilder.PackageManager.Editor`: package manifest changes
+- `Silverdale.UnityBuilder.TeamCity.Editor`: TeamCity service messages and manifests
+- `Silverdale.UnityBuilder.UnityCloudBuild.Editor`: Unity Build Automation manifests
 
-Signing credentials must come from CI secrets, environment variables, or command-line arguments. Never commit passwords, tokens, keys, provisioning profiles, or service-account files.
+The TeamCity providers register automatically in batch mode, except in Unity Build Automation. Unity Build Automation registers its manifest provider when `UNITY_CLOUD_BUILD` is defined. A project can replace a provider through `BuildServices.Register<T>()`; `BuildServices.Reset()` restores local defaults.
 
-## Versioning and releases
+## Credentials
 
-The repository follows [Semantic Versioning](https://semver.org/) and Conventional Commits without scopes:
+Supply signing passwords, tokens, keys, provisioning profiles, and service-account files through CI secrets, environment variables, or command-line arguments. Do not store them in a configuration class or commit them to the project.
 
-- `feat:` produces a minor release.
-- `fix:` and `perf:` produce a patch release.
-- `feat!:` or a `BREAKING CHANGE:` footer produces a major release.
-- Other allowed commit types do not release a new version.
+## Contributing and testing
 
-After changes merge to `main`, GitHub Actions updates `package.json` and creates the matching `vMAJOR.MINOR.PATCH` tag. Unity projects should consume those tags.
+Package tests are under `Tests/Editor`. In Unity, open **Window > General > Test Runner**, select **EditMode**, and run `Silverdale.UnityBuilder.Editor.Tests`.
 
-See [REPO-STANDARDS.md](REPO-STANDARDS.md) for the complete repository policy and [AGENTS.md](AGENTS.md) for contributor and coding-agent guidance.
+Before opening a pull request, also import the package into a small Unity project and compile every optional assembly you changed. Platform export and CI-provider changes should be checked in their real environment because EditMode tests do not exercise Xcode, Android signing, TeamCity, or Unity Build Automation end to end.
+
+The repository uses Conventional Commits and Semantic Versioning. After a releasable change merges to `main`, GitHub Actions updates `package.json` and creates the corresponding `vMAJOR.MINOR.PATCH` tag. See [REPO-STANDARDS.md](REPO-STANDARDS.md) for the exact rules.
 
 ## License
 
 [MIT](LICENSE)
-
----
-
-Bootstrapped from [aixaCode/repo-template](https://github.com/aixaCode/repo-template).
