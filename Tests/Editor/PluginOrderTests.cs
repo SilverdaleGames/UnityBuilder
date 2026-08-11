@@ -40,6 +40,28 @@ namespace Silverdale.UnityBuilder.Tests
 		}
 
 		[Test]
+		public void ResolveIgnoresMissingDependencies()
+		{
+			var dependent = new RunsAfterFirstPlugin();
+			var second = new SecondPlugin();
+
+			var result = PluginOrder.Resolve(new List<Plugin> { dependent, second });
+
+			Assert.That(result, Is.EqualTo(new Plugin[] { dependent, second }));
+		}
+
+		[Test]
+		public void ResolveAppliesDependenciesToDerivedPluginTypes()
+		{
+			var dependent = new RunsAfterFirstPlugin();
+			var derived = new DerivedFirstPlugin();
+
+			var result = PluginOrder.Resolve(new List<Plugin> { dependent, derived });
+
+			Assert.That(result, Is.EqualTo(new Plugin[] { derived, dependent }));
+		}
+
+		[Test]
 		public void ResolveExcludesDisabledPlugins()
 		{
 			var disabled = new FirstPlugin { IsEnabled = false };
@@ -59,6 +81,7 @@ namespace Silverdale.UnityBuilder.Tests
 		}
 
 		private class FirstPlugin : Plugin { }
+		private class DerivedFirstPlugin : FirstPlugin { }
 		private class SecondPlugin : Plugin { }
 
 		[RunsAfter(typeof(FirstPlugin))]
