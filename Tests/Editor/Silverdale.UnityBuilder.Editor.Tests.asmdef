@@ -1,0 +1,23 @@
+{
+  "name": "Silverdale.UnityBuilder.Editor.Tests",
+  "rootNamespace": "Silverdale.UnityBuilder.Tests",
+  "references": [
+    "Silverdale.UnityBuilder.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

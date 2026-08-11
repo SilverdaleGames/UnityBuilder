@@ -1,0 +1,81 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Compute version, update manifest, and tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          LAST="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)"
+          if [ -z "$LAST" ]; then
+            VERSION="0.1.0"
+            echo "No existing release; creating v${VERSION}."
+          else
+            MESSAGES="$(git log --format='%s%n%b' "${LAST}..HEAD")"
+            if printf '%s\n' "$MESSAGES" | grep -qE '^[a-z]+!:' || printf '%s\n' "$MESSAGES" | grep -qE '^BREAKING CHANGE:'; then
+              BUMP="major"
+            elif printf '%s\n' "$MESSAGES" | grep -qE '^feat:'; then
+              BUMP="minor"
+            elif printf '%s\n' "$MESSAGES" | grep -qE '^(fix|perf):'; then
+              BUMP="patch"
+            else
+              echo "No release-worthy commits since ${LAST}."
+              exit 0
+            fi
+
+            IFS=. read -r major minor patch <<< "${LAST#v}"
+            case "$BUMP" in
+              major) major=$((major + 1)); minor=0; patch=0 ;;
+              minor) minor=$((minor + 1)); patch=0 ;;
+              patch) patch=$((patch + 1)) ;;
+            esac
+            VERSION="${major}.${minor}.${patch}"
+            echo "Bumping ${BUMP}: ${LAST} -> v${VERSION}."
+          fi
+
+          TAG="v${VERSION}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "${TAG} already exists."
+            exit 0
+          fi
+
+          VERSION="$VERSION" python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path("package.json")
+          package = json.loads(path.read_text())
+          package["version"] = os.environ["VERSION"]
+          path.write_text(json.dumps(package, indent=2) + "\n")
+          PY
+
+          if ! git diff --quiet -- package.json; then
+            git add package.json
+            git commit -m "chore: bump version to ${VERSION}"
+            git push origin HEAD:main
+          fi
+
+          git tag -a "$TAG" -m "Release ${TAG}"
+          git push origin "$TAG"
