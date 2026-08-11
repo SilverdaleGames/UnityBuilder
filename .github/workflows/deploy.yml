@@ -1,0 +1,20 @@
+name: Deploy
+
+# Deployment is manual until this placeholder is replaced with a verified,
+# repository-specific workflow. Once configured, add the appropriate push or
+# release trigger and document the deployment model in README.md and AGENTS.md.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Deploy
+        run: |
+          echo "Replace this step with the real deploy for this repo."
+          exit 1

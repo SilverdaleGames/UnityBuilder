@@ -1,0 +1,14 @@
+# Secrets stay out of the tree — see REPO-STANDARDS.md §6
+.env
+*.pem
+*service-account*.json
+
+# Dependencies & build output
+node_modules/
+dist/
+coverage/
+
+# Logs & OS junk
+logs/
+*.log
+.DS_Store

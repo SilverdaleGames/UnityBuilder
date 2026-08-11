@@ -1,0 +1,11 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      # No scope — "chore: bump ..." must pass the pr-title check.
+      prefix: "chore"
+  # Add the repo's package ecosystem (npm, cargo, pip, ...) with the same
+  # unscoped "chore" prefix once the repo has a manifest.

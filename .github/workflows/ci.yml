@@ -1,0 +1,33 @@
+name: CI
+
+# Required check on development and main. Adapt the steps to the stack; keep the shape:
+# install -> lint/typecheck -> test -> build. A repo with no tests still
+# runs lint + build — "no CI" is not a valid state.
+#
+# The npm steps are guarded so the bare template stays green; once the repo
+# has a package.json they run, and for other stacks you replace them.
+on:
+  push:
+    branches: [development, main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        if: ${{ hashFiles('package.json') != '' }}
+        with:
+          node-version: "22"
+      - if: ${{ hashFiles('package.json') != '' }}
+        run: |
+          npm ci
+          npm run lint --if-present
+          npm test --if-present
+          npm run build --if-present
+      - if: ${{ hashFiles('package.json') == '' }}
+        run: echo "No package.json — adapt ci.yml to this repo's stack."
