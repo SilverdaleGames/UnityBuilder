@@ -1,7 +1,7 @@
 {
   "name": "com.silverdale.unity-builder",
   "displayName": "Silverdale Unity Builder",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "unity": "6000.0",
   "description": "Extensible editor-only build configuration and plugin pipeline for Unity projects.",
   "dependencies": {
