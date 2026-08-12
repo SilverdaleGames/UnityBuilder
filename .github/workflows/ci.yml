@@ -32,23 +32,20 @@ jobs:
         run: |
           set -euo pipefail
           status=0
-          for asset in package.json; do
-            if [ ! -f "${asset}.meta" ]; then
-              echo "Missing metadata: ${asset}.meta"
-              status=1
-            fi
-          done
-          if [ ! -f Editor.meta ]; then
-            echo "Missing metadata: Editor.meta"
-            status=1
-          fi
           while IFS= read -r asset; do
             case "$asset" in *.meta) continue ;; esac
             if [ ! -f "${asset}.meta" ]; then
               echo "Missing metadata: ${asset}.meta"
               status=1
             fi
-          done < <(find Editor Tests -type f | sort)
+          done < <(find Editor Tests docs -mindepth 1 \( -type f -o -type d \) | sort)
+
+          for asset in AGENTS.md CLAUDE.md LICENSE README.md REPO-STANDARDS.md package.json Editor Tests docs; do
+            if [ ! -f "${asset}.meta" ]; then
+              echo "Missing metadata: ${asset}.meta"
+              status=1
+            fi
+          done
           exit "$status"
 
       - name: Check package isolation
