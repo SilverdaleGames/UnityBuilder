@@ -22,6 +22,16 @@ Add the latest tagged release to `Packages/manifest.json`:
 
 Pin a tag instead of `main` so the same project revision always resolves the same package version.
 
+Private repositories require Git credentials on every developer and CI machine. An SSH package URL can use the same GitHub deploy key as the project checkout:
+
+```json
+{
+  "dependencies": {
+    "com.silverdale.unity-builder": "git+ssh://git@github.com/SilverdaleGames/UnityBuilder.git#v0.2.2"
+  }
+}
+```
+
 ## Create your first configuration
 
 Put build configurations in an editor folder, for example `Assets/Build/Editor`. Add an assembly definition there that references the core package assembly:
@@ -107,6 +117,8 @@ public sealed class BuildMetadataPlugin : Plugin
 {
 }
 ```
+
+Apple builds that use CocoaPods can register `Get<PatchPodDeploymentTargets>()`. The plugin patches EDM4U's generated Podfile before `pod install`, raising pod deployment targets below the project's configured minimum OS version.
 
 A dependency attribute applies when the referenced plugin is present. Missing optional plugins are ignored; dependency cycles fail with a clear error.
 

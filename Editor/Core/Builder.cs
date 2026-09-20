@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
@@ -8,6 +9,17 @@ namespace Silverdale.UnityBuilder
 	public class Builder
 	{
 		private static Exception activeException;
+		private static readonly List<Action> cleanupActions = new List<Action>();
+
+		public static void RegisterCleanupAction(Action cleanupAction)
+		{
+			if (cleanupAction == null)
+			{
+				throw new ArgumentNullException(nameof(cleanupAction));
+			}
+
+			cleanupActions.Add(cleanupAction);
+		}
 
 		/// <summary>
 		/// Main entry point for Buildtool when invoked from command line.
@@ -125,9 +137,23 @@ namespace Silverdale.UnityBuilder
 			}
 		}
 
-		private static void Cleanup()
+		internal static void Cleanup()
 		{
 			activeException = null;
+
+			for (var index = cleanupActions.Count - 1; index >= 0; index--)
+			{
+				try
+				{
+					cleanupActions[index]();
+				}
+				catch (Exception exception)
+				{
+					Utility.LogError($"Build cleanup failed: {exception.Message}");
+				}
+			}
+
+			cleanupActions.Clear();
 		}
 	}
 }
