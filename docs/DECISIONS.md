@@ -41,3 +41,13 @@ Record durable, non-obvious knowledge that can prevent regressions. Keep entries
 **Reason:** Immutable tags make package resolution reproducible and keep `package.json` aligned with the installed release.
 
 **When changing this:** Update the release workflow, README, and repository rules together, and validate the first release plus major, minor, patch, and no-release paths.
+
+## 2026-09-20 — Align CocoaPods deployment targets during export
+
+**Context:** New Xcode versions can reject pods whose podspec declares a deployment target below the SDK-supported range, even when the consuming Unity project targets a supported OS version.
+
+**Decision:** Apple build configurations using CocoaPods register `PatchPodDeploymentTargets`. It appends a Podfile post-install hook after EDM4U generates the file and before EDM4U invokes `pod install`, raising only targets below the project's minimum.
+
+**Reason:** Keeping the correction in the reusable build package applies it consistently to generated Podfiles without changing vendor podspecs or lowering pods that require newer OS versions.
+
+**When changing this:** Verify EDM4U callback ordering, generated Podfile syntax, iOS archive creation, and pods whose minimum is lower, equal to, and higher than the project target.

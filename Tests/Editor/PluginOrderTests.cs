@@ -6,6 +6,12 @@ namespace Silverdale.UnityBuilder.Tests
 {
 	public class PluginOrderTests
 	{
+		[TearDown]
+		public void TearDown()
+		{
+			Builder.Cleanup();
+		}
+
 		[Test]
 		public void ResolvePreservesRegistrationOrderWithoutDependencies()
 		{
@@ -78,6 +84,24 @@ namespace Silverdale.UnityBuilder.Tests
 			var plugins = new List<Plugin> { new CycleAPlugin(), new CycleBPlugin() };
 
 			Assert.Throws<InvalidOperationException>(() => PluginOrder.Resolve(plugins));
+		}
+
+		[Test]
+		public void CleanupRunsRegisteredActionsInReverseOrder()
+		{
+			var calls = new List<int>();
+			Builder.RegisterCleanupAction(() => calls.Add(1));
+			Builder.RegisterCleanupAction(() => calls.Add(2));
+
+			Builder.Cleanup();
+
+			Assert.That(calls, Is.EqualTo(new[] { 2, 1 }));
+		}
+
+		[Test]
+		public void RegisterCleanupActionRejectsNull()
+		{
+			Assert.Throws<ArgumentNullException>(() => Builder.RegisterCleanupAction(null));
 		}
 
 		private class FirstPlugin : Plugin { }
