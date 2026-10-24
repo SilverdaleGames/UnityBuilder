@@ -2,7 +2,8 @@
   "name": "Silverdale.UnityBuilder.Editor.Tests",
   "rootNamespace": "Silverdale.UnityBuilder.Tests",
   "references": [
-    "Silverdale.UnityBuilder.Editor"
+    "Silverdale.UnityBuilder.Editor",
+    "Silverdale.UnityBuilder.Platforms.Editor"
   ],
   "includePlatforms": [
     "Editor"
