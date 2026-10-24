@@ -120,6 +120,8 @@ public sealed class BuildMetadataPlugin : Plugin
 
 Apple builds that use CocoaPods can register `Get<PatchPodDeploymentTargets>()`. The plugin patches EDM4U's generated Podfile before `pod install`, raising pod deployment targets below the project's configured minimum OS version.
 
+iOS builds can register `Get<SingleSizeAppIcon>()`. After Unity exports the Xcode project, the plugin rewrites the AppIcon set to Xcode's single 1024x1024 format using the App Store icon from Player Settings, and Xcode generates the other sizes. App Store Connect rejects Unity's per-size icon set for apps built with Xcode 27.1.
+
 A dependency attribute applies when the referenced plugin is present. Missing optional plugins are ignored; dependency cycles fail with a clear error.
 
 ## Included assemblies

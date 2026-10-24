@@ -51,3 +51,14 @@ Record durable, non-obvious knowledge that can prevent regressions. Keep entries
 **Reason:** Keeping the correction in the reusable build package applies it consistently to generated Podfiles without changing vendor podspecs or lowering pods that require newer OS versions.
 
 **When changing this:** Verify EDM4U callback ordering, generated Podfile syntax, iOS archive creation, and pods whose minimum is lower, equal to, and higher than the project target.
+
+## 2026-10-24 — Export iOS app icons in the single-size format
+
+**Context:** Unity exports the iOS AppIcon set with one image per size. App Store Connect rejects that set for apps built with Xcode 27.1 (ITMS-90022, ITMS-90023 and ITMS-91111, "Missing required icon file") even though every size is in the bundle. The same icons built with Xcode 27.0 were accepted.
+
+**Decision:** iOS configurations register `SingleSizeAppIcon`. After export it keeps only Unity's 1024x1024 App Store icon and writes a single-size `Contents.json`, so Xcode generates every icon size.
+
+**Reason:** The single-size format is Xcode's current format and passes App Store validation with Xcode 27.1. Converting after export keeps Unity's icon settings as the source of truth.
+
+**When changing this:** Validate an exported archive with `xcrun altool --validate-app` and check for icon errors in the asset description response; the final "No errors" line can appear even when the icon check failed.
+
