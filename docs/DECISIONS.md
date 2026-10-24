@@ -54,11 +54,8 @@ Record durable, non-obvious knowledge that can prevent regressions. Keep entries
 
 ## 2026-10-24 — Export iOS app icons in the single-size format
 
-**Context:** Unity exports the iOS AppIcon set with one image per size. App Store Connect rejects that set for apps built with Xcode 27.1 (ITMS-90022, ITMS-90023 and ITMS-91111, "Missing required icon file") even though every size is in the bundle. The same icons built with Xcode 27.0 were accepted.
+**Context:** App Store Connect rejects Unity's per-size iOS AppIcon set for apps built with Xcode 27.1 (ITMS-90022, ITMS-90023, ITMS-91111), although every size is in the bundle. The same set built with Xcode 27.0 was accepted.
 
-**Decision:** iOS configurations register `SingleSizeAppIcon`. After export it keeps only Unity's 1024x1024 App Store icon and writes a single-size `Contents.json`, so Xcode generates every icon size.
+**Decision:** iOS configurations register `SingleSizeAppIcon`. After export it keeps Unity's 1024x1024 App Store icon and writes a single-size `Contents.json`; Xcode generates the other sizes.
 
-**Reason:** The single-size format is Xcode's current format and passes App Store validation with Xcode 27.1. Converting after export keeps Unity's icon settings as the source of truth.
-
-**When changing this:** Validate an exported archive with `xcrun altool --validate-app` and check for icon errors in the asset description response; the final "No errors" line can appear even when the icon check failed.
-
+**When changing this:** Check the asset description in `xcrun altool --validate-app --verbose` output for icon errors; its final "No errors" line appears even when the icon check fails.

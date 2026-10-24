@@ -1,34 +1,17 @@
 using System.IO;
 using UnityEditor;
-using UnityEditor.Build;
 
 namespace Silverdale.UnityBuilder
 {
 	/// <summary>
-	/// Rewrites the exported iOS AppIcon set to Xcode's single-size format, using Unity's 1024x1024 App Store icon.
-	/// Xcode then generates every icon size the app needs.
+	/// Rewrites the exported iOS AppIcon set to Xcode's single 1024x1024 format so Xcode generates every size.
 	/// </summary>
 	public class SingleSizeAppIcon : Plugin
 	{
-		public const string AppIconSetPath = "Unity-iPhone/Images.xcassets/AppIcon.appiconset";
-		public const string MarketingIconFile = "Icon-Store-1024.png";
-
-		private const string SingleSizeContents =
-@"{
-  ""images"" : [
-    {
-      ""filename"" : """ + MarketingIconFile + @""",
-      ""idiom"" : ""universal"",
-      ""platform"" : ""ios"",
-      ""size"" : ""1024x1024""
-    }
-  ],
-  ""info"" : {
-    ""author"" : ""xcode"",
-    ""version"" : 1
-  }
-}
-";
+		private const string IconFile = "Icon-Store-1024.png";
+		private const string Contents =
+			"{\"images\":[{\"filename\":\"" + IconFile + "\",\"idiom\":\"universal\",\"platform\":\"ios\",\"size\":\"1024x1024\"}]," +
+			"\"info\":{\"author\":\"xcode\",\"version\":1}}";
 
 		public SingleSizeAppIcon()
 		{
@@ -38,37 +21,29 @@ namespace Silverdale.UnityBuilder
 		public override void PostBuild(BuilderConfig config, string exportPath)
 		{
 			base.PostBuild(config, exportPath);
-
-			if (config.Unity.target == BuildTarget.iOS)
-			{
-				Convert(exportPath);
-			}
+			Convert(exportPath);
 		}
 
-		/// <summary>
-		/// Converts the AppIcon set in an exported Unity iOS project. Fails the build if the App Store icon is missing.
-		/// </summary>
 		public static void Convert(string exportPath)
 		{
-			var iconSetPath = Path.Combine(exportPath, AppIconSetPath);
-			var marketingIconPath = Path.Combine(iconSetPath, MarketingIconFile);
-			if (!File.Exists(marketingIconPath))
+			var iconSetPath = Path.Combine(exportPath, "Unity-iPhone/Images.xcassets/AppIcon.appiconset");
+			if (!File.Exists(Path.Combine(iconSetPath, IconFile)))
 			{
-				throw new BuildFailedException(
-					$"iOS App Store icon not found at {marketingIconPath}. Set the 1024x1024 icon in the iOS Player Settings.");
+				Utility.Log($"{IconFile} not found in {iconSetPath}; the AppIcon set was not converted");
+				return;
 			}
 
-			// Only the 1024x1024 image is referenced; Xcode warns about unreferenced files in the set.
+			// Xcode warns about images the set no longer references.
 			foreach (var file in Directory.GetFiles(iconSetPath, "*.png"))
 			{
-				if (Path.GetFileName(file) != MarketingIconFile)
+				if (Path.GetFileName(file) != IconFile)
 				{
 					File.Delete(file);
 				}
 			}
 
-			File.WriteAllText(Path.Combine(iconSetPath, "Contents.json"), SingleSizeContents);
-			Utility.Log($"Converted the iOS AppIcon set to the single 1024x1024 format at {iconSetPath}");
+			File.WriteAllText(Path.Combine(iconSetPath, "Contents.json"), Contents);
+			Utility.Log($"Converted the AppIcon set at {iconSetPath} to the single 1024x1024 format");
 		}
 	}
 }
